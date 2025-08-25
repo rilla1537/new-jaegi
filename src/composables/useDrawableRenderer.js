@@ -1,5 +1,6 @@
 import { watch, onMounted, onBeforeUnmount, nextTick, unref } from "vue";
 import { renderDrawables } from "@/services/canvas";
+import { useDrawableObjectsStore } from "@/stores/drawable-objects";
 
 /**
  * @param {{
@@ -18,6 +19,7 @@ export function useDrawableRenderer({
   clearBeforeDraw = true,
 }) {
   let stopWatch = () => {};
+  const store = useDrawableObjectsStore();
 
   function getCtxAndSize() {
     const canvas = unref(canvasRef);
@@ -57,7 +59,21 @@ export function useDrawableRenderer({
     const objects =
       typeof objectsRef === "function" ? objectsRef() : unref(objectsRef);
 
-    renderDrawables(ctx, objects, {
+    // ✅ 핸들러 좌표를 부모 shape의 points에서 동기화
+    const syncedObjects = objects.map((o) => {
+      if (o.role === "handler" && o.parentId != null && o.pointIndex != null) {
+        const parent = store.getShapeById(o.parentId);
+        if (parent && parent.points[o.pointIndex]) {
+          return {
+            ...o,
+            points: [parent.points[o.pointIndex]],
+          };
+        }
+      }
+      return o;
+    });
+
+    renderDrawables(ctx, syncedObjects, {
       clear: clearBeforeDraw,
       width: cssW,
       height: cssH,

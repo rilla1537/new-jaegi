@@ -2,7 +2,7 @@
 import { defineStore } from "pinia";
 
 // id 유틸
-function makeId() {
+function uuid() {
   return typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
     : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -11,7 +11,7 @@ function makeId() {
 // 라인
 function makeLine({ points, option } = {}) {
   return {
-    id: makeId(),
+    id: uuid(),
     name: "Line",
     role: "shape",
     shape: "line",
@@ -47,7 +47,7 @@ function makeRect({ points, option } = {}) {
     ];
   }
   return {
-    id: makeId(),
+    id: uuid(),
     name: "Rect",
     role: "shape",
     shape: "rect",
@@ -70,12 +70,14 @@ function makeHandler(point, parentId, index, radius, option = {}) {
     name: "Handler",
     role: "handler",
     shape: "circle",
-    points: [point],
+    points: [point], // 실제 좌표는 parent shape의 points[index]를 그대로 씀
+    parentId,
+    pointIndex: index,
     option: {
       width: 1,
       color: "#ff0000",
-      radius, // 필수
-      background: { color: "", alpha: 0 }, // 테두리만 보이게
+      radius,
+      background: { color: "", alpha: 0 },
       ...option,
     },
   };
@@ -84,23 +86,34 @@ function makeHandler(point, parentId, index, radius, option = {}) {
 export const useDrawableObjectsStore = defineStore("drawables", {
   state: () => ({
     drawableObjects: [],
-    handlerRadius: 6,     // 전역 핸들러 크기
-    showHandlers: false,  // 핸들러 토글 상태(단일 소스)
+    handlerRadius: 6,
+    handlerTargetId: null, // ✅ 현재 핸들러가 붙는 도형 id
   }),
+  getters: {
+    getShapeById: (state) => (id) =>
+      state.drawableObjects.find((o) => o.id === id),
+  },
   actions: {
     // ===== 도형 =====
     addLine(payload) {
-      this.drawableObjects.push(makeLine(payload));
+      const line = makeLine(payload);
+      this.drawableObjects.push(line);
       this._afterShapeMutated();
+      return line;
     },
     addRect(payload) {
-      this.drawableObjects.push(makeRect(payload));
+      const rect = makeRect(payload);
+      this.drawableObjects.push(rect);
       this._afterShapeMutated();
+      return rect;
     },
     updateObject(id, payload) {
       const idx = this.drawableObjects.findIndex((o) => o.id === id);
       if (idx !== -1) {
-        this.drawableObjects[idx] = { ...this.drawableObjects[idx], ...payload };
+        this.drawableObjects[idx] = {
+          ...this.drawableObjects[idx],
+          ...payload,
+        };
         this._afterShapeMutated();
       }
     },
@@ -111,15 +124,21 @@ export const useDrawableObjectsStore = defineStore("drawables", {
 
     // ===== 핸들러 =====
     clearHandlers() {
-      this.drawableObjects = this.drawableObjects.filter((o) => o.role !== "handler");
+      this.drawableObjects = this.drawableObjects.filter(
+        (o) => o.role !== "handler"
+      );
     },
     addHandlersForObject(obj) {
-      if (!obj?.points) return;
+      if (!obj?.points) return [];
       const r = this.handlerRadius;
-      const handlers = obj.points.map((p, idx) => makeHandler(p, obj.id, idx, r));
+      const handlers = obj.points.map((p, idx) =>
+        makeHandler(p, obj.id, idx, r)
+      );
       this.drawableObjects.push(...handlers);
       this.ensureHandlersOnTop();
+      return handlers;
     },
+
     setHandlerRadius(radius) {
       this.handlerRadius = Number(radius) || 0;
       // 존재하는 핸들러 반지름 즉시 반영
@@ -131,32 +150,41 @@ export const useDrawableObjectsStore = defineStore("drawables", {
       this.ensureHandlersOnTop();
     },
 
-    setShowHandlers(show) {
-      this.showHandlers = !!show;
-      // 현재 대상 shape에 대해 핸들러 추가/삭제
+    /**
+     * ✅ id 기반 핸들러 표시
+     */
+    makeHandler(id) {
+      this.handlerTargetId = id ?? null;
+
+      // 기존 핸들러 제거
       this.clearHandlers();
-      if (this.showHandlers) {
-        const target = this.drawableObjects.find(o => o.role === "shape");
-        if (target) this.addHandlersForObject(target);
+
+      if (!this.handlerTargetId) return;
+
+      const target = this.getShapeById(this.handlerTargetId);
+      let handlers = null;
+      if (target && target.role === "shape") {
+        handlers = this.addHandlersForObject(target);
+        this.drawableObjects = this.drawableObjects.map((o) =>
+          o.role === "handler"
+            ? { ...o, option: { ...o.option, radius: this.handlerRadius } }
+            : o
+        );
       }
-      // 반지름 반영 안전장치
-      this.drawableObjects = this.drawableObjects.map((o) =>
-        o.role === "handler"
-          ? { ...o, option: { ...o.option, radius: this.handlerRadius } }
-          : o
-      );
+
       this.ensureHandlersOnTop();
+      return handlers;
     },
 
     // ===== 레이어 =====
     ensureHandlersOnTop() {
-      const shapes = this.drawableObjects.filter(o => o.role !== "handler");
-      const handlers = this.drawableObjects.filter(o => o.role === "handler");
+      const shapes = this.drawableObjects.filter((o) => o.role !== "handler");
+      const handlers = this.drawableObjects.filter((o) => o.role === "handler");
       this.drawableObjects = [...shapes, ...handlers];
     },
     layerUp(id) {
-      const obj = this.drawableObjects.find(o => o.id === id);
-      if (obj?.role === "handler") return; // 핸들러 레이어 이동 금지
+      const obj = this.drawableObjects.find((o) => o.id === id);
+      if (obj?.role === "handler") return;
       const idx = this.drawableObjects.findIndex((o) => o.id === id);
       if (idx !== -1 && idx < this.drawableObjects.length - 1) {
         const arr = this.drawableObjects;
@@ -165,7 +193,7 @@ export const useDrawableObjectsStore = defineStore("drawables", {
       this.ensureHandlersOnTop();
     },
     layerDown(id) {
-      const obj = this.drawableObjects.find(o => o.id === id);
+      const obj = this.drawableObjects.find((o) => o.id === id);
       if (obj?.role === "handler") return;
       const idx = this.drawableObjects.findIndex((o) => o.id === id);
       if (idx > 0) {
@@ -175,7 +203,7 @@ export const useDrawableObjectsStore = defineStore("drawables", {
       this.ensureHandlersOnTop();
     },
     drawOnTop(id) {
-      const obj = this.drawableObjects.find(o => o.id === id);
+      const obj = this.drawableObjects.find((o) => o.id === id);
       if (obj?.role === "handler") return;
       const idx = this.drawableObjects.findIndex((o) => o.id === id);
       if (idx !== -1) {
@@ -185,7 +213,7 @@ export const useDrawableObjectsStore = defineStore("drawables", {
       this.ensureHandlersOnTop();
     },
     drawOnBottom(id) {
-      const obj = this.drawableObjects.find(o => o.id === id);
+      const obj = this.drawableObjects.find((o) => o.id === id);
       if (obj?.role === "handler") return;
       const idx = this.drawableObjects.findIndex((o) => o.id === id);
       if (idx !== -1) {
@@ -195,20 +223,26 @@ export const useDrawableObjectsStore = defineStore("drawables", {
       this.ensureHandlersOnTop();
     },
 
-    // 내부 훅: shape 변경 시 핸들러 상태 유지
+    // ===== 내부 훅 =====
     _afterShapeMutated() {
-      // showHandlers가 켜져 있다면 첫 shape에 대해 핸들러 재구성
-      if (this.showHandlers) {
-        this.clearHandlers();
-        const target = this.drawableObjects.find(o => o.role === "shape");
-        if (target) this.addHandlersForObject(target);
-        // 반지름 동기화
+      if (!this.handlerTargetId) {
+        this.ensureHandlersOnTop();
+        return;
+      }
+
+      this.clearHandlers();
+      const target = this.getShapeById(this.handlerTargetId);
+      if (target && target.role === "shape") {
+        this.addHandlersForObject(target);
         this.drawableObjects = this.drawableObjects.map((o) =>
           o.role === "handler"
             ? { ...o, option: { ...o.option, radius: this.handlerRadius } }
             : o
         );
+      } else {
+        this.handlerTargetId = null;
       }
+
       this.ensureHandlersOnTop();
     },
   },

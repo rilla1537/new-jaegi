@@ -11,6 +11,9 @@
       <router-link to="/prototype/manage-drawable-objects?title=도형 추가/삭제 + 레이어 변경">도형 추가/삭제 + 레이어 변경</router-link>
       <router-link to="/prototype/handler-view?title=핸들러 View">핸들러 View</router-link>
       <router-link to="/prototype/handler-selection?title=핸들러 선택">핸들러 선택</router-link>
+      <router-link to="/prototype/draw-baseline?title=전략패턴: 기준선 그리기 (1)">전략패턴: 기준선 그리기 (1)</router-link>
+      <router-link to="/prototype/draw-measureline?title=전략패턴: 기준선 + 측정선 그리기 (2)">전략패턴: 기준선 + 측정선 그리기(2)</router-link>
+      <router-link to="/prototype/strategy3?title=전략패턴: 선 그리고 핸들러 조작 (3)">전략패턴: 선 그리고 핸들러 조작 (3)</router-link>
 
       <router-view/>
     </nav>

@@ -1,3 +1,4 @@
+<!-- HandlerView.vue (patched) -->
 <template>
   <div class="drawables-prototype">
     <h2>{{ title }}</h2>
@@ -13,22 +14,23 @@
       <button :class="{ active: selectedShape === 'line' }" @click="selectShape('line')">라인</button>
       <button :class="{ active: selectedShape === 'rect' }" @click="selectShape('rect')">사각형</button>
 
-      <!-- 핸들러 토글 -->
+      <!-- 핸들러 토글 (id 기반) -->
       <label style="margin-left: 20px;">
-        <input type="checkbox" v-model="showHandlers" />
+        <input type="checkbox" v-model="showHandlersUI" @change="onToggleHandlers" />
         핸들러 보임
       </label>
 
       <!-- 핸들러 크기 슬라이더 -->
       <div class="handler-size">
-        <label for="handlerRadius">핸들러 크기: {{ handlerRadius }}</label>
+        <label for="handlerRadius">핸들러 크기: {{ handlerRadiusLocal }}</label>
         <input
           id="handlerRadius"
           type="range"
           min="2"
           max="20"
           step="1"
-          v-model.number="handlerRadius"
+          v-model.number="handlerRadiusLocal"
+          @input="onChangeRadius"
         />
       </div>
     </div>
@@ -103,7 +105,6 @@ import { ref } from "vue";
 import { useRoute } from "vue-router";
 import { useDrawableObjectsStore } from "@/stores/drawable-objects";
 import { useDrawableRenderer } from "@/composables/useDrawableRenderer";
-import { useHandlerControls } from "@/composables/useHandlerControls"; // ⭐ 통합 컴포저블
 
 const route = useRoute();
 const title = ref(route.query.title ?? "Drawables Prototype");
@@ -122,11 +123,21 @@ const { redraw } = useDrawableRenderer({
   clearBeforeDraw: true,
 });
 
-// ⭐ 핸들러 보임/숨김 + 반지름 통합 컨트롤 (v-model 바로 사용 가능)
-const { showHandlers, handlerRadius, safeRedraw } = useHandlerControls(redraw);
+// useHandlerControls 제거 → 간단 래퍼로 대체
+const safeRedraw = () => {
+  // 필요 시 rAF로 감싸도 됨
+  redraw();
+};
 
 // 선택된 도형
 const selectedShape = ref(null);
+// 마지막 생성한 shape id (핸들러 대상 기본값으로 사용)
+const lastCreatedShapeId = ref(null);
+
+// UI용 토글 상태(실제 소스오브트루스는 store.handlerTargetId)
+const showHandlersUI = ref(false);
+// 반지름 로컬값 (스토어에 쓰기 전 UI 미세조정 가능)
+const handlerRadiusLocal = ref(store.handlerRadius);
 
 // 도형 선택 버튼
 function selectShape(shape) {
@@ -134,13 +145,15 @@ function selectShape(shape) {
 
   // 기존 도형 + 핸들러 제거
   store.drawableObjects = [];
+  store.makeHandler(null); // 대상 해제 & 핸들러 제거
 
   const cx = canvasWidth.value / 2;
   const cy = canvasHeight.value / 2;
   const color = randomColor();
 
+  let created;
   if (shape === "line") {
-    store.addLine({
+    created = store.addLine({
       points: [
         { x: cx - 50, y: cy },
         { x: cx + 50, y: cy },
@@ -148,7 +161,7 @@ function selectShape(shape) {
       option: { width: 3, color },
     });
   } else if (shape === "rect") {
-    store.addRect({
+    created = store.addRect({
       points: [
         { x: cx - 40, y: cy - 30 },
         { x: cx + 40, y: cy + 30 },
@@ -157,8 +170,33 @@ function selectShape(shape) {
     });
   }
 
-  // 토글 상태를 반영하여 핸들러 재구성(스토어가 처리)
-  store.setShowHandlers(store.showHandlers);
+  lastCreatedShapeId.value = created?.id ?? null;
+
+  // UI 토글이 켜져 있으면 새로 만든 도형에 핸들러 붙이기
+  if (showHandlersUI.value && lastCreatedShapeId.value) {
+    store.makeHandler(lastCreatedShapeId.value);
+  }
+
+  safeRedraw();
+}
+
+function onToggleHandlers() {
+  if (showHandlersUI.value) {
+    // 켬: 대상 id가 없으면 첫 shape 또는 마지막 생성 id 사용
+    const targetId =
+      lastCreatedShapeId.value ??
+      store.drawableObjects.find(o => o.role === "shape")?.id ??
+      null;
+    store.makeHandler(targetId);
+  } else {
+    // 끔: 전부 제거
+    store.makeHandler(null);
+  }
+  safeRedraw();
+}
+
+function onChangeRadius() {
+  store.setHandlerRadius(handlerRadiusLocal.value);
   safeRedraw();
 }
 

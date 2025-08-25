@@ -8,6 +8,9 @@ import RectSelectionStorke from '@/prototype/components/RectSelectionStorke.vue'
 import ManageDrawableObjects from '@/prototype/components/ManageDrawableObjects.vue';
 import HandlerView from '@/prototype/components/HandlerView.vue';
 import HandlerSelection from '@/prototype/components/HandlerSelection.vue';
+import DrawBaseline from '@/prototype/components/Stragtegy_1_DrawBaseline.vue';
+import DrawMeasureline from '@/prototype/components/Stragtegy_2_DrawMeasureline.vue';
+import Stragtegy_3 from '@/prototype/components/Stragtegy_3.vue';
 
 const routes = [
   {
@@ -58,6 +61,18 @@ const routes = [
       {
         path: 'handler-selection',
         component: HandlerSelection,
+      },
+      {
+        path: 'draw-baseline',
+        component: DrawBaseline,
+      },
+      {
+        path: 'draw-measureline',
+        component: DrawMeasureline,
+      },
+      {
+        path: 'strategy3',
+        component: Stragtegy_3,
       },
     ],
   },

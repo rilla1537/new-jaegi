@@ -12,7 +12,7 @@ import { useDrawableObjectsStore } from "@/stores/drawable-objects";
  *
  * 요구사항: store에 아래 API가 있어야 함
  *  - state: showHandlers, handlerRadius
- *  - actions: setShowHandlers(boolean), setHandlerRadius(number), ensureHandlersOnTop()
+ *  - actions: makeHandler(boolean), setHandlerRadius(number), ensureHandlersOnTop()
  */
 export function useHandlerControls(redraw) {
   const store = useDrawableObjectsStore();
@@ -25,7 +25,7 @@ export function useHandlerControls(redraw) {
   const showHandlers = computed({
     get: () => store.showHandlers,
     set: (v) => {
-      store.setShowHandlers(!!v);
+      store.makeHandler(!!v);
       safeRedraw();
     },
   });
@@ -39,7 +39,7 @@ export function useHandlerControls(redraw) {
   });
 
   const toggleHandlers = () => {
-    store.setShowHandlers(!store.showHandlers);
+    store.makeHandler(!store.showHandlers);
     safeRedraw();
   };
 

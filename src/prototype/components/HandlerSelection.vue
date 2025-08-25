@@ -110,7 +110,7 @@ function selectShape(shape) {
   }
 
   // 현재 토글 상태 반영하여 핸들러 재구성 (반지름도 store가 동기화)
-  store.setShowHandlers(showHandlers.value);
+  store.makeHandler(showHandlers.value);
 
   selectedHandlerId.value = null;
   safeRedraw();
