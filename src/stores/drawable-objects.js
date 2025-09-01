@@ -15,7 +15,10 @@ function makeLine({ points, option } = {}) {
     name: "Line",
     role: "shape",
     shape: "line",
-    points: points || [{ x: 0, y: 0 }, { x: 0, y: 0 }],
+    points: points || [
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+    ],
     option: {
       width: 1,
       color: "#ffffff",
@@ -92,6 +95,41 @@ export const useDrawableObjectsStore = defineStore("drawables", {
   getters: {
     getShapeById: (state) => (id) =>
       state.drawableObjects.find((o) => o.id === id),
+    /**
+     * 렌더링 전용 파생 데이터 getter
+     *
+     * 핸들러(handler)는 본래 좌표를 소유하지 않고,
+     * 부모 도형의 특정 point를 추적하는 역할만 합니다.
+     * 이 getter는 drawableObjects 배열을 순회하면서
+     * role==="handler" 인 객체를 부모 도형의 points[pointIndex]로
+     * 항상 최신화된 좌표를 덮어씁니다.
+     *
+     * 따라서 Canvas 계층은 이 getter가 반환하는 배열을
+     * 그대로 받아 draw 하면 핸들러가 부모 도형을 따라다니는
+     * 동작이 자동으로 보장됩니다.
+     *
+     * @returns {Drawable[]} 렌더링 가능한 도형/핸들러 배열
+     *   - line, rect 등 shape 객체는 그대로 반환
+     *   - handler 객체는 parentId/pointIndex 기준으로
+     *     points[0]이 항상 부모의 최신 좌표로 대체된 shallow copy 반환
+     */
+    renderables() {
+      return this.drawableObjects.map((o) => {
+        if (
+          o.role === "handler" &&
+          o.parentId != null &&
+          o.pointIndex != null
+        ) {
+          const parent = this.getShapeById(o.parentId);
+          const p = parent?.points?.[o.pointIndex];
+          if (p) {
+            // draw 전용 shallow copy
+            return { ...o, points: [p] };
+          }
+        }
+        return o;
+      });
+    },
   },
   actions: {
     // ===== 도형 =====

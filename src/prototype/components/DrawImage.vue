@@ -43,7 +43,7 @@
 
 <script setup>
 import { ref, watch, nextTick, onMounted } from 'vue';
-import { drawImageWithAspectRatio } from '@/services/canvas';
+import { drawImageWithAspectRatio } from '@/canvas';
 
 const canvasWidth = ref(500);
 const canvasHeight = ref(300);

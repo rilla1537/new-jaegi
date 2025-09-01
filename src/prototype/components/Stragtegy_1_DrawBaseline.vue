@@ -46,7 +46,7 @@ import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useDrawableObjectsStore } from "@/stores/drawable-objects";
 import { useDrawableRenderer } from "@/composables/useDrawableRenderer";
-import { DrawBaseLineState } from "@/services/states/draw-base-line";
+import { DrawBaseLineState } from "@/canvas/strategies/draw-base-line";
 
 const route = useRoute();
 const title = ref(route.query.title ?? "Drawables Prototype (Bare)");

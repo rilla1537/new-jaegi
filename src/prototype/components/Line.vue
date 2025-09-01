@@ -177,7 +177,7 @@
 
 <script setup>
 import { ref, watch, nextTick, onMounted } from "vue";
-import { drawLine } from "@/services/canvas";
+import { drawLine } from "@/canvas";
 
 // ===== 상태 =====
 const canvasWidth = ref(600);

@@ -1,4 +1,5 @@
 import { useDrawableObjectsStore } from '@/stores/drawable-objects';
+import { unref } from 'vue';
 /**
  * store에서 선 색상/두께/캡션/조인 등 옵션을 가져와서 사용해야 함
  */
@@ -12,12 +13,12 @@ export class DrawBaseLineState {
     cancel = () => {};
 
     constructor(ctx) {
-        this.ctx = ctx;    
+        this.ctx = ctx;
         this.store = useDrawableObjectsStore();
     }
 
     onPointerDown(event) {
-        const rect = this.ctx.value.getBoundingClientRect();
+        const rect = unref(this.ctx).getBoundingClientRect();
         const p1 = { x: event.clientX - rect.left, y: event.clientY - rect.top };
         const p2 = { x: p1.x + 1, y: p1.y };
         
@@ -45,7 +46,7 @@ export class DrawBaseLineState {
     onPointerUp(event) {
         const shapeId = this.baseline?.id;
         this.baseline = null;
-        console.log('DrawBaseLineState onPointerUp');
+        console.log('DrawBaseLineState onPointerUp', 'shapeId', shapeId);
         this.success(shapeId);
     }
 

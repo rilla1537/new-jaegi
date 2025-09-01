@@ -47,8 +47,8 @@ import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useDrawableObjectsStore } from "@/stores/drawable-objects";
 import { useDrawableRenderer } from "@/composables/useDrawableRenderer";
-import { DrawBaseLineState } from "@/services/states/draw-base-line";
-import { DrawMeasurelineState } from "@/services/states/draw-measure-line"; 
+import { DrawBaseLineState } from "@/canvas/strategies/draw-base-line";
+import { DrawMeasurelineState } from "@/canvas/strategies/draw-measure-line"; 
 
 const route = useRoute();
 const title = ref(route.query.title ?? "Drawables Prototype (Bare)");
@@ -86,13 +86,13 @@ drawMeasurelineState.success = (shapeId) => {
   toggleState();
 }
 
-const states = [drawBaselineState, drawMeasurelineState];
+const strategies = [drawBaselineState, drawMeasurelineState];
 let toggle = false;
-let canvasState = states[0]; // 기본 상태를 drawBaseline으로 설정
+let canvasState = strategies[0]; // 기본 상태를 drawBaseline으로 설정
 
 function toggleState() {
   toggle = !toggle;
-  canvasState = toggle ? states[1] : states[0];
+  canvasState = toggle ? strategies[1] : strategies[0];
   console.log("현재 상태:", canvasState.constructor.name);
 }
 

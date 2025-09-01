@@ -1,5 +1,5 @@
 import { watch, onMounted, onBeforeUnmount, nextTick, unref } from "vue";
-import { renderDrawables } from "@/services/canvas";
+import { renderDrawables } from "@/canvas";
 import { useDrawableObjectsStore } from "@/stores/drawable-objects";
 
 /**
@@ -18,6 +18,7 @@ export function useDrawableRenderer({
   dprAware = true,
   clearBeforeDraw = true,
 }) {
+  // console.log('canvasRef', canvasRef);
   let stopWatch = () => {};
   const store = useDrawableObjectsStore();
 
@@ -58,22 +59,7 @@ export function useDrawableRenderer({
 
     const objects =
       typeof objectsRef === "function" ? objectsRef() : unref(objectsRef);
-
-    // ✅ 핸들러 좌표를 부모 shape의 points에서 동기화
-    const syncedObjects = objects.map((o) => {
-      if (o.role === "handler" && o.parentId != null && o.pointIndex != null) {
-        const parent = store.getShapeById(o.parentId);
-        if (parent && parent.points[o.pointIndex]) {
-          return {
-            ...o,
-            points: [parent.points[o.pointIndex]],
-          };
-        }
-      }
-      return o;
-    });
-
-    renderDrawables(ctx, syncedObjects, {
+    renderDrawables(ctx, objects, {
       clear: clearBeforeDraw,
       width: cssW,
       height: cssH,
@@ -85,11 +71,7 @@ export function useDrawableRenderer({
     const sources = [objectsRef];
     if (sizeRef) sources.push(sizeRef);
 
-    stopWatch = watch(
-      sources,
-      () => nextTick(redraw),
-      { deep: true }
-    );
+    stopWatch = watch(sources, () => nextTick(redraw), { deep: true });
   });
 
   onBeforeUnmount(() => {

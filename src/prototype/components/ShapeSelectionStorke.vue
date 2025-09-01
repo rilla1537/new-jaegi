@@ -96,7 +96,7 @@
 
 <script setup>
 import { ref, watch, onMounted, nextTick } from "vue";
-import { drawLine } from "@/services/canvas";
+import { drawLine } from "@/canvas";
 import { onPath } from "@/math";
 
 // ===== 상태 =====
